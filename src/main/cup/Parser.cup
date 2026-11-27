@@ -1,0 +1,342 @@
+import br.edu.minilang.ast.*;
+import br.edu.minilang.diagnostics.Diagnostic;
+import br.edu.minilang.diagnostics.DiagnosticReporter;
+import br.edu.minilang.semantics.Type;
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import java.util.List;
+
+parser code {:
+    private DiagnosticReporter diagnostics = new DiagnosticReporter();
+
+    public void setDiagnosticReporter(DiagnosticReporter diagnostics) {
+        this.diagnostics = diagnostics;
+    }
+
+    @Override
+    public void syntax_error(Symbol currentToken) {
+
+        diagnostics.report(
+            Diagnostic.Phase.SYNTACTIC,
+            Math.max(currentToken.left, 1),
+            Math.max(currentToken.right, 1),
+            "Token inesperado."
+        );
+    }
+
+    @Override
+    public void unrecovered_syntax_error(Symbol currentToken) throws Exception {
+        // O erro já foi registrado por syntax_error.
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Statement> asStatements(List items) {
+        return (List<Statement>) items;
+    }
+:};
+
+terminal INT, BOOL, TRUE, FALSE, IF, ELSE, WHILE;
+
+terminal String IDENTIFICADOR, LITERAL_INTEIRO;
+
+terminal ATRIBUICAO;
+terminal MAIS, MENOS, VEZES, DIVISAO, RESTO;
+terminal MENOR, MENOR_IGUAL, MAIOR, MAIOR_IGUAL;
+terminal IGUAL, DIFERENTE, E_LOGICO, OU_LOGICO, NAO_LOGICO;
+terminal ABRE_PARENTESE, FECHA_PARENTESE;
+terminal ABRE_CHAVE, FECHA_CHAVE;
+terminal PONTO_E_VIRGULA;
+
+non terminal Program programa;
+non terminal List lista_comandos;
+non terminal Statement comando;
+non terminal Declaration declaracao;
+non terminal Type tipo;
+non terminal Expression inicializador_opcional;
+non terminal Assignment atribuicao;
+non terminal Block bloco;
+non terminal IfStatement condicional;
+non terminal Block senao_opcional;
+non terminal WhileStatement repeticao;
+
+non terminal Expression expressao;
+non terminal Expression expressao_ou;
+non terminal Expression expressao_e;
+non terminal Expression igualdade;
+non terminal Expression relacional;
+non terminal Expression aditiva;
+non terminal Expression multiplicativa;
+non terminal Expression unaria;
+non terminal Expression primaria;
+
+start with programa;
+
+programa ::= lista_comandos:comandos
+    {: RESULT = new Program(1, 1, asStatements(comandos)); :}
+    ;
+
+lista_comandos ::= lista_comandos:lista comando:novo_comando
+    {:
+        lista.add(novo_comando);
+        RESULT = lista;
+    :}
+    | /* vazio */
+    {:
+        RESULT = new ArrayList();
+    :}
+    ;
+
+comando ::= declaracao:valor
+    {: RESULT = valor; :}
+    | atribuicao:valor
+    {: RESULT = valor; :}
+    | bloco:valor
+    {: RESULT = valor; :}
+    | condicional:valor
+    {: RESULT = valor; :}
+    | repeticao:valor
+    {: RESULT = valor; :}
+    ;
+
+declaracao ::= tipo:tipo IDENTIFICADOR:nome
+               inicializador_opcional:inicializador PONTO_E_VIRGULA
+    {:
+        RESULT = new Declaration(
+            nomeleft,
+            nomeright,
+            tipo,
+            nome,
+            inicializador
+        );
+    :}
+    ;
+
+tipo ::= INT
+    {: RESULT = Type.INT; :}
+    | BOOL
+    {: RESULT = Type.BOOL; :}
+    ;
+
+inicializador_opcional ::= ATRIBUICAO expressao:valor
+    {: RESULT = valor; :}
+    | /* vazio */
+    {: RESULT = null; :}
+    ;
+
+atribuicao ::= IDENTIFICADOR:nome ATRIBUICAO expressao:valor
+               PONTO_E_VIRGULA
+    {:
+        RESULT = new Assignment(
+            nomeleft,
+            nomeright,
+            nome,
+            valor
+        );
+    :}
+    ;
+
+bloco ::= ABRE_CHAVE:inicio lista_comandos:comandos FECHA_CHAVE
+    {:
+        RESULT = new Block(
+            inicioleft,
+            inicioright,
+            asStatements(comandos)
+        );
+    :}
+    ;
+
+condicional ::= IF:inicio ABRE_PARENTESE expressao:condicao
+                FECHA_PARENTESE bloco:entao senao_opcional:senao
+    {:
+        RESULT = new IfStatement(
+            inicioleft,
+            inicioright,
+            condicao,
+            entao,
+            senao
+        );
+    :}
+    ;
+
+senao_opcional ::= ELSE bloco:alternativa
+    {: RESULT = alternativa; :}
+    | /* vazio */
+    {: RESULT = null; :}
+    ;
+
+repeticao ::= WHILE:inicio ABRE_PARENTESE expressao:condicao
+              FECHA_PARENTESE bloco:corpo
+    {:
+        RESULT = new WhileStatement(
+            inicioleft,
+            inicioright,
+            condicao,
+            corpo
+        );
+    :}
+    ;
+
+expressao ::= expressao_ou:valor
+    {: RESULT = valor; :}
+    ;
+
+expressao_ou ::= expressao_ou:esquerda OU_LOGICO:operador expressao_e:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.OR, direita
+        );
+    :}
+    | expressao_e:valor
+    {: RESULT = valor; :}
+    ;
+
+expressao_e ::= expressao_e:esquerda E_LOGICO:operador igualdade:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.AND, direita
+        );
+    :}
+    | igualdade:valor
+    {: RESULT = valor; :}
+    ;
+
+igualdade ::= igualdade:esquerda IGUAL:operador relacional:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.EQUAL, direita
+        );
+    :}
+    | igualdade:esquerda DIFERENTE:operador relacional:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.NOT_EQUAL, direita
+        );
+    :}
+    | relacional:valor
+    {: RESULT = valor; :}
+    ;
+
+relacional ::= relacional:esquerda MENOR:operador aditiva:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.LESS, direita
+        );
+    :}
+    | relacional:esquerda MENOR_IGUAL:operador aditiva:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.LESS_EQUAL, direita
+        );
+    :}
+    | relacional:esquerda MAIOR:operador aditiva:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.GREATER, direita
+        );
+    :}
+    | relacional:esquerda MAIOR_IGUAL:operador aditiva:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.GREATER_EQUAL, direita
+        );
+    :}
+    | aditiva:valor
+    {: RESULT = valor; :}
+    ;
+
+aditiva ::= aditiva:esquerda MAIS:operador multiplicativa:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.ADD, direita
+        );
+    :}
+    | aditiva:esquerda MENOS:operador multiplicativa:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.SUBTRACT, direita
+        );
+    :}
+    | multiplicativa:valor
+    {: RESULT = valor; :}
+    ;
+
+multiplicativa ::= multiplicativa:esquerda VEZES:operador unaria:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.MULTIPLY, direita
+        );
+    :}
+    | multiplicativa:esquerda DIVISAO:operador unaria:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.DIVIDE, direita
+        );
+    :}
+    | multiplicativa:esquerda RESTO:operador unaria:direita
+    {:
+        RESULT = new BinaryExpression(
+            operadorleft, operadorright,
+            esquerda, BinaryOperator.REMAINDER, direita
+        );
+    :}
+    | unaria:valor
+    {: RESULT = valor; :}
+    ;
+
+unaria ::= NAO_LOGICO:operador unaria:valor
+    {:
+        RESULT = new UnaryExpression(
+            operadorleft, operadorright,
+            UnaryOperator.NOT, valor
+        );
+    :}
+    | MENOS:operador unaria:valor
+    {:
+        RESULT = new UnaryExpression(
+            operadorleft, operadorright,
+            UnaryOperator.NEGATE, valor
+        );
+    :}
+    | primaria:valor
+    {: RESULT = valor; :}
+    ;
+
+primaria ::= LITERAL_INTEIRO:valor
+    {:
+        RESULT = new LiteralExpression(
+            valorleft, valorright, valor, Type.INT
+        );
+    :}
+    | TRUE:valor
+    {:
+        RESULT = new LiteralExpression(
+            valorleft, valorright, "true", Type.BOOL
+        );
+    :}
+    | FALSE:valor
+    {:
+        RESULT = new LiteralExpression(
+            valorleft, valorright, "false", Type.BOOL
+        );
+    :}
+    | IDENTIFICADOR:nome
+    {:
+        RESULT = new VariableExpression(
+            nomeleft, nomeright, nome
+        );
+    :}
+    | ABRE_PARENTESE expressao:valor FECHA_PARENTESE
+    {: RESULT = valor; :}
+    ;

@@ -1,0 +1,16 @@
+int total = 10;
+bool ativo = true;
+
+{
+    int dobro = total * 2;
+
+    if (ativo && dobro >= 20) {
+        total = dobro;
+    } else {
+        total = 0;
+    }
+}
+
+while (total > 0) {
+    total = total - 1;
+}

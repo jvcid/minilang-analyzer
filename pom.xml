@@ -56,7 +56,7 @@
                     </execution>
                 </executions>
                 <configuration>
-                    <cupDefinition>parser.cup</cupDefinition>
+                    <cupDefinition>src/main/cup/Parser.cup</cupDefinition>
                     <className>Parser</className>
                     <symbolsName>sym</symbolsName>
                     <packageName>br.edu.minilang.parser</packageName>
