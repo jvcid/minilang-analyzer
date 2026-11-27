@@ -1,4 +1,8 @@
-# MiniLang: analisador léxico, sintático e semântico
+# Relatório técnico: analisador léxico, sintático e semântico da MiniLang
+
+## Repositório
+
+[github.com/jvcid/minilang-analyzer](https://github.com/jvcid/minilang-analyzer)
 
 ## 1. Objetivo
 
@@ -10,7 +14,7 @@ O programa não executa os comandos da linguagem. Sua finalidade é analisar o c
 
 A linguagem diferencia maiúsculas de minúsculas. Seus tipos são `int` e `bool`. As palavras reservadas são `int`, `bool`, `true`, `false`, `if`, `else` e `while`.
 
-Identificadores seguem `[A-Za-z_][A-Za-z0-9_]*`; literais inteiros são decimais não negativos. Comentários de linha começam com `//`. Os operadores disponíveis são `=`, `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `&&`, `||` e `!`.
+Identificadores seguem `[A-Za-z_][A-Za-z0-9_]*`. Os literais inteiros são números decimais não negativos. Comentários de linha começam com `//`. A linguagem reconhece os operadores `=`, `+`, `-`, `*`, `/`, `%`, `<`, `<=`, `>`, `>=`, `==`, `!=`, `&&`, `||` e `!`.
 
 Exemplo válido:
 
@@ -77,7 +81,7 @@ primaria          -> LITERAL_INTEIRO
                    | ABRE_PARENTESE expressao FECHA_PARENTESE
 ```
 
-A separação das expressões por níveis estabelece precedência: operadores unários; multiplicação, divisão e resto; soma e subtração; comparações; igualdade; `&&`; e `||`. Os operadores binários de cada nível associam à esquerda.
+A separação das expressões por níveis define a precedência dos operadores. A ordem, do maior para o menor nível, é: operadores unários, multiplicação e divisão, soma e subtração, comparações, igualdade, `&&` e `||`. Os operadores binários de cada nível associam à esquerda.
 
 Os corpos de `if`, `else` e `while` são blocos. Essa decisão elimina a ambiguidade de associação de `else` e mantém a gramática concisa.
 
@@ -85,29 +89,29 @@ Os corpos de `if`, `else` e `while` são blocos. Essa decisão elimina a ambigui
 
 O `Main` lê o arquivo informado ou, sem argumento, usa `examples/programa.minilang`. O lexer transforma o texto em símbolos com linha e coluna. O parser aplica a gramática e cria nós da AST. Se houver erro léxico ou sintático, os diagnósticos são apresentados e a análise semântica não prossegue. Caso contrário, a AST é impressa e o `SemanticAnalyzer` percorre os comandos.
 
-Os nós da AST ficam em `br.edu.minilang.ast`; a tabela e o analisador semântico ficam em `br.edu.minilang.semantics`; o registro de erros fica em `br.edu.minilang.diagnostics`; e a impressão da árvore fica em `br.edu.minilang.output`. As classes `Lexer`, `Parser` e `sym` são geradas a partir de `Lexer.flex` e `Parser.cup` durante o ciclo Maven.
+Os nós da AST ficam em `br.edu.minilang.ast`. A tabela de símbolos e o analisador semântico ficam em `br.edu.minilang.semantics`. O registro de erros está em `br.edu.minilang.diagnostics`, enquanto a impressão da árvore é feita por `br.edu.minilang.output`. Durante o ciclo Maven, as classes `Lexer`, `Parser` e `sym` são geradas a partir de `Lexer.flex` e `Parser.cup`.
 
 ## 5. Tabela de símbolos e regras semânticas
 
-Cada símbolo registra nome, tipo, linha e coluna da declaração, identificador do escopo e nível de aninhamento. O escopo global tem nível 0. Cada bloco cria um escopo filho. A busca procura primeiro no escopo atual e depois nos escopos ancestrais. Uma declaração interna pode ocultar uma externa; uma nova declaração com nome já usado no mesmo escopo é inválida.
+Cada símbolo registra nome, tipo, linha e coluna da declaração, identificador do escopo e nível de aninhamento. O escopo global tem nível 0. Cada bloco cria um escopo filho. A busca começa no escopo atual e segue pelos escopos ancestrais. Uma declaração interna pode ocultar uma declaração externa. Uma variável não pode ser declarada novamente no mesmo escopo.
 
 As regras de tipos implementadas são:
 
 | Construção | Regra |
 |---|---|
-| `+`, `-`, `*`, `/`, `%` | Dois operandos `INT`; resultado `INT` |
-| `-` unário | Operando `INT`; resultado `INT` |
-| `<`, `<=`, `>`, `>=` | Dois operandos `INT`; resultado `BOOL` |
-| `==`, `!=` | Operandos do mesmo tipo; resultado `BOOL` |
-| `&&`, `||`, `!` | Operandos `BOOL`; resultado `BOOL` |
+| `+`, `-`, `*`, `/`, `%` | Dois operandos `INT`, com resultado `INT` |
+| `-` unário | Operando `INT`, com resultado `INT` |
+| `<`, `<=`, `>`, `>=` | Dois operandos `INT`, com resultado `BOOL` |
+| `==`, `!=` | Operandos do mesmo tipo, com resultado `BOOL` |
+| `&&`, `||`, `!` | Operandos `BOOL`, com resultado `BOOL` |
 | Atribuição e inicializador | Tipo da expressão igual ao da variável |
 | Condição de `if` e `while` | Resultado `BOOL` |
 
-O analisador reporta variáveis não declaradas, redeclarações no mesmo escopo e incompatibilidades de tipos. Declarações sem inicializador são permitidas; o analisador não executa o programa nem avalia divisões por zero.
+O analisador reporta variáveis não declaradas, redeclarações no mesmo escopo e incompatibilidades de tipos. Declarações sem inicializador são permitidas. O analisador não executa o programa nem verifica divisões por zero.
 
 ## 6. Configuração e execução
 
-O projeto usa Java 21 como versão de compilação, Maven, JFlex 1.9.1, Java CUP 11b-20160615-3 e `maven-compiler-plugin` 3.13.0. A especificação do lexer está em `src/main/jflex/Lexer.flex`; a gramática e as ações do parser, em `src/main/cup/Parser.cup`.
+O projeto usa Java 21, Maven, JFlex 1.9.1, Java CUP 11b-20160615-3 e `maven-compiler-plugin` 3.13.0. A especificação do lexer está em `src/main/jflex/Lexer.flex`. A gramática e as ações do parser estão em `src/main/cup/Parser.cup`.
 
 Compilação:
 
@@ -117,8 +121,8 @@ mvn clean compile
 
 Execução pela configuração **Application** do IntelliJ:
 
-- Main class: `br.edu.minilang.Main`;
-- Working directory: raiz do projeto;
+- Main class: `br.edu.minilang.Main`
+- Working directory: raiz do projeto
 - Program arguments: caminho do arquivo, por exemplo `examples/programa.minilang`.
 
 Sem argumento, o arquivo `examples/programa.minilang` é utilizado por padrão.
@@ -129,13 +133,13 @@ Os casos abaixo foram executados pela classe `Main`. Os resultados são apresent
 
 | Caso | Entrada ou regra | Resultado observado |
 |---|---|---|
-| Válido | `examples/programa.minilang` | AST impressa; `total` e `ativo` em `E0`, `dobro` em `E1`; análise concluída sem erros |
+| Válido | `examples/programa.minilang` | AST impressa. `total` e `ativo` aparecem em `E0`, enquanto `dobro` aparece em `E1`. A análise termina sem erros. |
 | Léxico | `@` na linha 2 de `lexico.minilang` | `Léxico [2:1]: Caractere inválido: '@'.` |
 | Sintático | Ponto e vírgula ausente em `sintatico.minilang` | `Sintático [1:15]: Token inesperado.` |
 | Semântico: não declarada | `saldo = 10;` | `Semântico [1:1]: A variável 'saldo' não foi declarada.` |
 | Semântico: tipo | `int idade = true;` | `Semântico [1:13]: O inicializador de 'idade' deve ter tipo INT, mas recebeu BOOL.` |
 
-No caso semântico de tipo, a AST e a tabela também são exibidas antes do diagnóstico. No caso de variável não declarada, a tabela não contém símbolos porque o arquivo não declara variáveis.
+No erro de tipo, a AST e a tabela são exibidas antes do diagnóstico. No caso da variável não declarada, a tabela fica vazia porque o arquivo não contém declarações.
 
 ## 8. Conclusão
 
