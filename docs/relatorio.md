@@ -1,8 +1,6 @@
 # Relatório técnico: analisador léxico, sintático e semântico da MiniLang
 
-## Repositório
-
-[github.com/jvcid/minilang-analyzer](https://github.com/jvcid/minilang-analyzer)
+**Repositório do projeto:** [github.com/jvcid/minilang-analyzer](https://github.com/jvcid/minilang-analyzer)
 
 ## 1. Objetivo
 
@@ -103,7 +101,8 @@ As regras de tipos implementadas são:
 | `-` unário | Operando `INT`, com resultado `INT` |
 | `<`, `<=`, `>`, `>=` | Dois operandos `INT`, com resultado `BOOL` |
 | `==`, `!=` | Operandos do mesmo tipo, com resultado `BOOL` |
-| `&&`, `||`, `!` | Operandos `BOOL`, com resultado `BOOL` |
+| Operadores lógicos binários | Dois operandos `BOOL`, com resultado `BOOL` |
+| Negação lógica | Um operando `BOOL`, com resultado `BOOL` |
 | Atribuição e inicializador | Tipo da expressão igual ao da variável |
 | Condição de `if` e `while` | Resultado `BOOL` |
 
